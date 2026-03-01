@@ -33,6 +33,9 @@ export default function Dashboard() {
   const [newBirthdayDate, setNewBirthdayDate] = useState("");
   const [birthdayToday, setBirthdayToday] = useState<Birthday[]>([]);
 
+  // Sidebar collapse
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
   // Hydrate localStorage data
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -146,28 +149,42 @@ export default function Dashboard() {
       </main>
 
       {/* Sidebar */}
-      <aside className="flex-shrink-0 ml-8 border-l border-gray-300 pl-4 flex flex-col gap-4">
-        {/* Add Birthday */}
+      <aside className="flex-shrink-0 ml-8 flex flex-row items-start gap-2">
+        {/* Collapse/Expand toggle button */}
         <button
-          onClick={() => setShowBirthdayModal(true)}
-          className="px-2 py-1 bg-pink-500 text-white rounded-md hover:bg-pink-600 transition"
+          onClick={() => setSidebarOpen((prev) => !prev)}
+          className="mt-1 px-2 py-1 rounded-md border border-gray-300 text-sm hover:bg-gray-100 transition"
+          title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
         >
-          Add Birthday
+          {sidebarOpen ? "›" : "‹"}
         </button>
 
-        {/* Theme Selector */}
-        <select
-          value={theme.name}
-          onChange={(e) => {
-            const t = defaultThemes.find((th) => th.name === e.target.value);
-            if (t) { setTheme(t); window.localStorage.setItem("theme", t.name); }
-          }}
-          className="px-2 py-1 rounded-md border border-gray-300"
-        >
-          {defaultThemes.map((th) => (
-            <option key={th.name} value={th.name}>{th.name}</option>
-          ))}
-        </select>
+        {/* Sidebar content */}
+        {sidebarOpen && (
+          <div className="border-l border-gray-300 pl-4 flex flex-col gap-4">
+            {/* Add Birthday */}
+            <button
+              onClick={() => setShowBirthdayModal(true)}
+              className="px-2 py-1 bg-pink-500 text-white rounded-md hover:bg-pink-600 transition"
+            >
+              Add Birthday
+            </button>
+
+            {/* Theme Selector */}
+            <select
+              value={theme.name}
+              onChange={(e) => {
+                const t = defaultThemes.find((th) => th.name === e.target.value);
+                if (t) { setTheme(t); window.localStorage.setItem("theme", t.name); }
+              }}
+              className="px-2 py-1 rounded-md border border-gray-300"
+            >
+              {defaultThemes.map((th) => (
+                <option key={th.name} value={th.name}>{th.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </aside>
 
       {/* Birthday Modal */}
