@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type StreakData = {
   dates: string[];
@@ -18,38 +18,51 @@ const themes: Theme[] = [
   { name: "Dark Feminine", bg: "bg-gray-900", text: "text-white", accent: "bg-purple-500" },
   { name: "Spiritual baddie", bg: "bg-orange-50", text: "text-orange-900", accent: "bg-orange-400" },
   { name: "Queen of Cups", bg: "bg-blue-50", text: "text-blue-900", accent: "bg-blue-400" },
-  { name: "Touch grass", bg: "bg-green-50", text: "text-green-900", accent: "bg-green-400" }, // New theme
+  { name: "Touch grass", bg: "bg-green-50", text: "text-green-900", accent: "bg-green-400" }, 
+  { name: "Red Velvet", bg: "bg-red-900", text: "text-white", accent: "bg-black" }, 
 ];
 
-export default function Dashboard() {
-  const [dates, setDates] = useState<string[]>([]);
-  const [today, setToday] = useState<Date | null>(null);
-  const [theme, setTheme] = useState<Theme>(themes[0]);
-  const [sidebarOpen, setSidebarOpen] = useState(true); // sidebar state
-
-  // Load streaks from localStorage
-  useEffect(() => {
-    const stored = window.localStorage.getItem("streakData");
-    const parsed: StreakData = stored ? JSON.parse(stored) : { dates: [] };
-    setDates(parsed.dates);
-    setToday(new Date());
-  }, []);
-
-  // Load theme from localStorage
-  useEffect(() => {
+// ✅ Initialize theme from localStorage
+const getInitialTheme = (): Theme => {
+  if (typeof window !== "undefined") {
     const storedTheme = window.localStorage.getItem("theme");
     if (storedTheme) {
       const t = themes.find((th) => th.name === storedTheme);
-      if (t) setTheme(t);
+      if (t) return t;
     }
-  }, []);
+  }
+  return themes[0];
+};
 
-  // Save theme preference
-  useEffect(() => {
-    window.localStorage.setItem("theme", JSON.stringify(theme.name));
-  }, [theme]);
+// ✅ Initialize streak data from localStorage
+const getInitialDates = (): string[] => {
+  if (typeof window !== "undefined") {
+    const stored = window.localStorage.getItem("streakData");
+    if (stored) {
+      try {
+        const parsed: StreakData = JSON.parse(stored);
+        return parsed.dates || [];
+      } catch {
+        return [];
+      }
+    }
+  }
+  return [];
+};
 
-  if (!today) return null;
+export default function Dashboard() {
+  const [dates, setDates] = useState<string[]>(getInitialDates);
+  const [today] = useState<Date>(new Date()); // today fixed
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Save theme whenever it changes
+  const handleThemeChange = (th: Theme) => {
+    setTheme(th);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("theme", JSON.stringify(th.name));
+    }
+  };
 
   const toggleToday = () => {
     const iso = today.toISOString().split("T")[0];
@@ -58,7 +71,9 @@ export default function Dashboard() {
       : [...dates, iso];
 
     setDates(updated);
-    window.localStorage.setItem("streakData", JSON.stringify({ dates: updated }));
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("streakData", JSON.stringify({ dates: updated }));
+    }
   };
 
   return (
@@ -99,7 +114,7 @@ export default function Dashboard() {
             {themes.map((th) => (
               <button
                 key={th.name}
-                onClick={() => setTheme(th)}
+                onClick={() => handleThemeChange(th)}
                 className={`px-3 py-1 rounded-md text-white ${th.accent} ${
                   theme.name === th.name ? "ring-2 ring-offset-1 ring-gray-500" : ""
                 }`}
