@@ -5,8 +5,9 @@ import { useState, useEffect } from "react";
 type StreakData = { dates: string[] };
 type Theme = { name: string; bg: string; text: string; accent: string };
 type Birthday = { name: string; date: string };
+type ReflectionEntry = { text: string; photo?: string };
 
-const themes: Theme[] = [
+const defaultThemes: Theme[] = [
   { name: "Diva behaviour", bg: "bg-white", text: "text-gray-900", accent: "bg-pink-500" },
   { name: "Dark Feminine", bg: "bg-gray-900", text: "text-white", accent: "bg-purple-500" },
   { name: "Spiritual baddie", bg: "bg-orange-50", text: "text-orange-900", accent: "bg-orange-400" },
@@ -15,57 +16,76 @@ const themes: Theme[] = [
   { name: "Red Velvet", bg: "bg-red-900", text: "text-white", accent: "bg-black" },
 ];
 
-// Example birthdays (add more as needed)
-const birthdays: Birthday[] = [
-  { name: "Alice", date: "2026-03-01" },
-  { name: "Bob", date: "2026-03-05" },
-];
-
 export default function Dashboard() {
   const [dates, setDates] = useState<string[]>([]);
-  const [theme, setTheme] = useState<Theme>(themes[0]);
-  const [today, setToday] = useState<Date>(new Date());
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [theme, setTheme] = useState<Theme>(defaultThemes[0]);
+  const [today, setToday] = useState(new Date());
   const [hydrated, setHydrated] = useState(false);
-  const [reflections, setReflections] = useState<{ [key: string]: string }>({});
+
+  // Reflections
+  const [reflections, setReflections] = useState<{ [key: string]: ReflectionEntry }>({});
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  // Birthdays
+  const [birthdays, setBirthdays] = useState<Birthday[]>([]);
+  const [showBirthdayModal, setShowBirthdayModal] = useState(false);
+  const [newBirthdayName, setNewBirthdayName] = useState("");
+  const [newBirthdayDate, setNewBirthdayDate] = useState("");
   const [birthdayToday, setBirthdayToday] = useState<Birthday[]>([]);
 
-  // Hydration + load localStorage
+  // Hydrate localStorage data
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const stored = window.localStorage.getItem("streakData");
-    if (stored) {
+    const storedStreaks = window.localStorage.getItem("streakData");
+    if (storedStreaks) {
       try {
-        const parsed: StreakData = JSON.parse(stored);
+        const parsed: StreakData = JSON.parse(storedStreaks);
         setDates(parsed.dates || []);
       } catch {}
     }
 
     const storedTheme = window.localStorage.getItem("theme");
     if (storedTheme) {
-      const t = themes.find((th) => th.name === JSON.parse(storedTheme));
+      const t = defaultThemes.find((th) => th.name === storedTheme);
       if (t) setTheme(t);
     }
 
     const storedReflections = window.localStorage.getItem("reflections");
     if (storedReflections) {
-      try {
-        setReflections(JSON.parse(storedReflections));
-      } catch {}
+      try { setReflections(JSON.parse(storedReflections)); } catch {}
     }
 
-    const now = new Date();
-    setToday(now);
-
-    // Check birthdays
-    const isoToday = now.toISOString().split("T")[0];
-    const todayBirthdays = birthdays.filter((b) => b.date === isoToday);
-    setBirthdayToday(todayBirthdays);
+    const storedBirthdays = window.localStorage.getItem("birthdays");
+    if (storedBirthdays) {
+      try { setBirthdays(JSON.parse(storedBirthdays)); } catch {}
+    }
 
     setHydrated(true);
   }, []);
+
+  // Check today's birthdays
+  useEffect(() => {
+    const isoToday = today.toISOString().split("T")[0];
+    const todayBirthdays = birthdays.filter((b) => b.date === isoToday);
+    setBirthdayToday(todayBirthdays);
+
+    if (todayBirthdays.length > 0 && "Notification" in window) {
+      if (Notification.permission === "granted") {
+        todayBirthdays.forEach((b) =>
+          new Notification("Birthday Alert! 🎉", { body: `${b.name} has a birthday today!` })
+        );
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then((perm) => {
+          if (perm === "granted") {
+            todayBirthdays.forEach((b) =>
+              new Notification("Birthday Alert! 🎉", { body: `${b.name} has a birthday today!` })
+            );
+          }
+        });
+      }
+    }
+  }, [birthdays, today]);
 
   if (!hydrated) return null;
 
@@ -76,27 +96,31 @@ export default function Dashboard() {
     window.localStorage.setItem("streakData", JSON.stringify({ dates: updated }));
   };
 
-  const handleThemeChange = (th: Theme) => {
-    setTheme(th);
-    window.localStorage.setItem("theme", JSON.stringify(th.name));
-  };
-
-  const openReflection = (date: string) => setSelectedDate(date);
-  const saveReflection = (text: string) => {
+  const saveReflection = (text: string, photo?: string) => {
     if (!selectedDate) return;
-    const updated = { ...reflections, [selectedDate]: text };
+    const updated = { ...reflections, [selectedDate]: { text, photo } };
     setReflections(updated);
     window.localStorage.setItem("reflections", JSON.stringify(updated));
     setSelectedDate(null);
   };
 
+  const addBirthday = () => {
+    if (!newBirthdayName || !newBirthdayDate) return;
+    const updated = [...birthdays, { name: newBirthdayName, date: newBirthdayDate }];
+    setBirthdays(updated);
+    window.localStorage.setItem("birthdays", JSON.stringify(updated));
+    setNewBirthdayName("");
+    setNewBirthdayDate("");
+    setShowBirthdayModal(false);
+  };
+
   return (
     <div className={`flex min-h-screen ${theme.bg} ${theme.text} p-8`}>
+      {/* Main Content */}
       <main className="flex-1 flex flex-col items-center justify-center space-y-8 transition-colors duration-300">
-        {/* Birthday Notification */}
         {birthdayToday.length > 0 && (
           <div className="p-3 bg-yellow-100 text-yellow-900 rounded-md shadow-md text-center">
-            🎉 {birthdayToday.map((b) => b.name).join(", ")}'s birthday today! Don't forget to wish 💖
+            🎉 {birthdayToday.map((b) => b.name).join(", ")}'s birthday today! 💖
           </div>
         )}
 
@@ -117,57 +141,77 @@ export default function Dashboard() {
           today={today}
           accent={theme.accent}
           reflections={reflections}
-          onDayClick={openReflection}
+          onDayClick={(date) => setSelectedDate(date)}
         />
       </main>
 
       {/* Sidebar */}
-      <aside
-        className={`flex-shrink-0 ml-8 border-l border-gray-300 pl-4 transition-all duration-500 ease-in-out ${
-          sidebarOpen ? "w-48" : "w-12"
-        }`}
-      >
+      <aside className="flex-shrink-0 ml-8 border-l border-gray-300 pl-4 flex flex-col gap-4">
+        {/* Add Birthday */}
         <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="mb-4 px-2 py-1 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 transition"
+          onClick={() => setShowBirthdayModal(true)}
+          className="px-2 py-1 bg-pink-500 text-white rounded-md hover:bg-pink-600 transition"
         >
-          {sidebarOpen ? "⏴" : "⏵"}
+          Add Birthday
         </button>
 
-        {sidebarOpen ? (
-          <div className="flex flex-col gap-2">
-            <h2 className="text-lg font-medium mb-4">Choose Your Mood Theme</h2>
-            {themes.map((th) => (
-              <button
-                key={th.name}
-                onClick={() => handleThemeChange(th)}
-                className={`px-3 py-1 rounded-md text-white ${th.accent} ${
-                  theme.name === th.name ? "ring-2 ring-offset-1 ring-gray-500" : ""
-                }`}
-              >
-                {th.name}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3 items-center mt-2">
-            {themes.map((th) => (
-              <div
-                key={th.name}
-                onClick={() => handleThemeChange(th)}
-                title={th.name}
-                className={`w-5 h-5 rounded-full cursor-pointer transition-transform hover:scale-125 ${th.accent}`}
-              />
-            ))}
-          </div>
-        )}
+        {/* Theme Selector */}
+        <select
+          value={theme.name}
+          onChange={(e) => {
+            const t = defaultThemes.find((th) => th.name === e.target.value);
+            if (t) { setTheme(t); window.localStorage.setItem("theme", t.name); }
+          }}
+          className="px-2 py-1 rounded-md border border-gray-300"
+        >
+          {defaultThemes.map((th) => (
+            <option key={th.name} value={th.name}>{th.name}</option>
+          ))}
+        </select>
       </aside>
+
+      {/* Birthday Modal */}
+      {showBirthdayModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-md p-6 w-96 text-gray-900 shadow-lg">
+            <h2 className="text-lg font-semibold mb-4">Add Birthday</h2>
+            <input
+              type="text"
+              placeholder="Name"
+              value={newBirthdayName}
+              onChange={(e) => setNewBirthdayName(e.target.value)}
+              className="w-full px-2 py-1 border border-gray-300 rounded-md mb-2"
+            />
+            <input
+              type="date"
+              value={newBirthdayDate}
+              onChange={(e) => setNewBirthdayDate(e.target.value)}
+              className="w-full px-2 py-1 border border-gray-300 rounded-md mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowBirthdayModal(false)}
+                className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addBirthday}
+                className="px-4 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-600 transition"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reflection Modal */}
       {selectedDate && (
         <ReflectionModal
           date={selectedDate}
-          initialText={reflections[selectedDate] || ""}
+          initialText={reflections[selectedDate]?.text || ""}
+          initialPhoto={reflections[selectedDate]?.photo}
           onSave={saveReflection}
           onClose={() => setSelectedDate(null)}
         />
@@ -175,8 +219,7 @@ export default function Dashboard() {
     </div>
   );
 }
-
-// CalendarGrid with reflections
+// CalendarGrid Component
 function CalendarGrid({
   dates,
   today,
@@ -187,11 +230,10 @@ function CalendarGrid({
   dates: string[];
   today: Date;
   accent: string;
-  reflections: { [key: string]: string };
+  reflections: { [key: string]: ReflectionEntry };
   onDayClick: (date: string) => void;
 }) {
   const weeksToShow = 12;
-
   const endDate = new Date(today);
   const startDate = new Date(today);
   startDate.setDate(today.getDate() - weeksToShow * 7);
@@ -220,26 +262,19 @@ function CalendarGrid({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Month labels */}
       <div className="flex gap-2 ml-8 text-xs text-gray-500">
         {monthLabels.map((m) => (
-          <div key={m.index} className="w-5 text-center font-medium">
-            {m.label}
-          </div>
+          <div key={m.index} className="w-5 text-center font-medium">{m.label}</div>
         ))}
       </div>
 
       <div className="flex gap-2">
-        {/* Weekdays */}
         <div className="flex flex-col gap-2 text-xs text-gray-500">
           {weekdays.map((day) => (
-            <div key={day} className="h-5 flex items-center">
-              {day}
-            </div>
+            <div key={day} className="h-5 flex items-center">{day}</div>
           ))}
         </div>
 
-        {/* Calendar grid */}
         <div className="flex gap-2 overflow-x-auto">
           {weeks.map((week, weekIndex) => (
             <div key={weekIndex} className="flex flex-col gap-2">
@@ -254,11 +289,7 @@ function CalendarGrid({
                     key={iso}
                     onClick={() => !isFuture && onDayClick(iso)}
                     className={`w-5 h-5 rounded-sm cursor-pointer transition ${
-                      isFuture
-                        ? "bg-transparent"
-                        : isCompleted
-                        ? accent
-                        : "bg-gray-300"
+                      isFuture ? "bg-transparent" : isCompleted ? accent : "bg-gray-300"
                     } ${hasReflection ? "ring-2 ring-yellow-400" : ""}`}
                     title={`${date.toDateString()}${hasReflection ? " – Reflection exists" : ""}`}
                   />
@@ -276,37 +307,46 @@ function CalendarGrid({
 function ReflectionModal({
   date,
   initialText,
+  initialPhoto,
   onSave,
   onClose,
 }: {
   date: string;
   initialText: string;
-  onSave: (text: string) => void;
+  initialPhoto?: string;
+  onSave: (text: string, photo?: string) => void;
   onClose: () => void;
 }) {
   const [text, setText] = useState(initialText);
+  const [photo, setPhoto] = useState<string | undefined>(initialPhoto);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setPhoto(reader.result as string);
+    reader.readAsDataURL(file);
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-md p-6 w-96 text-gray-900 shadow-lg">
         <h2 className="text-lg font-semibold mb-2">{date} Reflection</h2>
         <textarea
-          className="w-full h-32 p-2 border border-gray-300 rounded-md mb-4"
+          className="w-full h-24 p-2 border border-gray-300 rounded-md mb-2"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Write something about your day..."
         />
+        <div className="mb-2">
+          <input type="file" accept="image/*" onChange={handlePhotoUpload} />
+        </div>
+        {photo && <img src={photo} className="w-24 h-24 object-cover rounded-md mb-2" alt="reflection photo" />}
         <div className="flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 transition"
-          >
+          <button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 transition">
             Close
           </button>
-          <button
-            onClick={() => onSave(text)}
-            className="px-4 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-600 transition"
-          >
+          <button onClick={() => onSave(text, photo)} className="px-4 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-600 transition">
             Save
           </button>
         </div>
