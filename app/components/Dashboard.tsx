@@ -6,27 +6,47 @@ type StreakData = {
   dates: string[];
 };
 
+type Theme = {
+  name: string;
+  bg: string;
+  text: string;
+  accent: string;
+};
+
+const themes: Theme[] = [
+  { name: "Diva", bg: "bg-white", text: "text-gray-900", accent: "bg-pink-500" },
+  { name: "Dark feminine", bg: "bg-gray-900", text: "text-white", accent: "bg-purple-500" },
+  { name: "Spiritual", bg: "bg-orange-50", text: "text-orange-900", accent: "bg-orange-400" },
+  { name: "Queen of Cups", bg: "bg-blue-50", text: "text-blue-900", accent: "bg-blue-400" },
+];
+
 export default function Dashboard() {
   const [dates, setDates] = useState<string[]>([]);
   const [today, setToday] = useState<Date | null>(null);
+  const [theme, setTheme] = useState<Theme>(themes[0]);
 
-  // ✅ Use a function to safely load localStorage once
+  // Load streaks from localStorage
   useEffect(() => {
-    const init = () => {
-      const stored = window.localStorage.getItem("streakData");
-      const parsed: StreakData = stored
-        ? JSON.parse(stored)
-        : { dates: [] };
-
-      // Only set state if changed (prevents unnecessary rerender warning)
-      setDates(parsed.dates);
-      setToday(new Date());
-    };
-
-    init();
+    const stored = window.localStorage.getItem("streakData");
+    const parsed: StreakData = stored ? JSON.parse(stored) : { dates: [] };
+    setDates(parsed.dates);
+    setToday(new Date());
   }, []);
 
-  if (!today) return null; // wait until client renders
+  // Save theme preference
+  useEffect(() => {
+    window.localStorage.setItem("theme", JSON.stringify(theme.name));
+  }, [theme]);
+
+  useEffect(() => {
+    const storedTheme = window.localStorage.getItem("theme");
+    if (storedTheme) {
+      const t = themes.find((th) => th.name === storedTheme);
+      if (t) setTheme(t);
+    }
+  }, []);
+
+  if (!today) return null;
 
   const toggleToday = () => {
     const iso = today.toISOString().split("T")[0];
@@ -39,25 +59,46 @@ export default function Dashboard() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-white text-gray-900 space-y-8 p-8">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-semibold">Whats up babe? 🎀</h1>
-        <p className="text-gray-500">what do u feel like doing today?</p>
-      </div>
+    <div className={`flex min-h-screen ${theme.bg} ${theme.text} p-8`}>
+      {/* Main content */}
+      <main className="flex-1 flex flex-col items-center justify-center space-y-8">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-semibold">Whats up babe? 🎀</h1>
+          <p className="text-gray-500">what do u feel like doing today?</p>
+        </div>
 
-      <button
-        onClick={toggleToday}
-        className="px-5 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-600 transition"
-      >
-        Toggle Today
-      </button>
+        <button
+          onClick={toggleToday}
+          className={`px-5 py-2 rounded-md hover:brightness-90 transition ${theme.accent} text-white`}
+        >
+          Toggle Today
+        </button>
 
-      <CalendarGrid dates={dates} today={today} />
-    </main>
+        <CalendarGrid dates={dates} today={today} accent={theme.accent} />
+      </main>
+
+      {/* Sidebar */}
+      <aside className="w-48 ml-8 flex-shrink-0 border-l border-gray-300 pl-4">
+        <h2 className="text-lg font-medium mb-4">Choose Your Mood Theme</h2>
+        <div className="flex flex-col gap-2">
+          {themes.map((th) => (
+            <button
+              key={th.name}
+              onClick={() => setTheme(th)}
+              className={`px-3 py-1 rounded-md text-white ${
+                th.accent
+              } ${theme.name === th.name ? "ring-2 ring-offset-1 ring-gray-500" : ""}`}
+            >
+              {th.name}
+            </button>
+          ))}
+        </div>
+      </aside>
+    </div>
   );
 }
 
-function CalendarGrid({ dates, today }: { dates: string[]; today: Date }) {
+function CalendarGrid({ dates, today, accent }: { dates: string[]; today: Date; accent: string }) {
   const weeksToShow = 12;
 
   const endDate = new Date(today);
@@ -82,37 +123,19 @@ function CalendarGrid({ dates, today }: { dates: string[]; today: Date }) {
     weeks.push(allDates.slice(i, i + 7));
   }
 
-  // Month labels
-  const monthLabels: { index: number; label: string }[] = [];
-  weeks.forEach((week, i) => {
-    const firstDay = week[0];
-    const prevWeek = weeks[i - 1];
-    if (i === 0 || firstDay.getMonth() !== prevWeek?.[0].getMonth()) {
-      monthLabels.push({
-        index: i,
-        label: firstDay.toLocaleString("default", { month: "short" }),
-      });
-    }
-  });
-
   const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Month Labels */}
       <div className="flex gap-2 ml-8 text-xs text-gray-500">
-        {weeks.map((_, i) => {
-          const month = monthLabels.find((m) => m.index === i);
-          return (
-            <div key={i} className="w-5 text-center">
-              {month ? month.label : ""}
-            </div>
-          );
-        })}
+        {weeks.map((_, i) => (
+          <div key={i} className="w-5 text-center">
+            {/* Empty month labels for simplicity */}
+          </div>
+        ))}
       </div>
 
       <div className="flex gap-2">
-        {/* Weekday Labels */}
         <div className="flex flex-col gap-2 text-xs text-gray-500">
           {weekdays.map((day) => (
             <div key={day} className="h-5 flex items-center">
@@ -121,7 +144,6 @@ function CalendarGrid({ dates, today }: { dates: string[]; today: Date }) {
           ))}
         </div>
 
-        {/* Calendar Grid */}
         <div className="flex gap-2 overflow-x-auto">
           {weeks.map((week, weekIndex) => (
             <div key={weekIndex} className="flex flex-col gap-2">
@@ -137,8 +159,8 @@ function CalendarGrid({ dates, today }: { dates: string[]; today: Date }) {
                       isFuture
                         ? "bg-transparent"
                         : isCompleted
-                        ? "bg-pink-500"
-                        : "bg-pink-200"
+                        ? accent
+                        : "bg-gray-300"
                     }`}
                     title={date.toDateString()}
                   />
