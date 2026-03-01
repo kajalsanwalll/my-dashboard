@@ -14,16 +14,18 @@ type Theme = {
 };
 
 const themes: Theme[] = [
-  { name: "Diva", bg: "bg-white", text: "text-gray-900", accent: "bg-pink-500" },
-  { name: "Dark feminine", bg: "bg-gray-900", text: "text-white", accent: "bg-purple-500" },
-  { name: "Spiritual", bg: "bg-orange-50", text: "text-orange-900", accent: "bg-orange-400" },
+  { name: "Diva behaviour", bg: "bg-white", text: "text-gray-900", accent: "bg-pink-500" },
+  { name: "Dark Feminine", bg: "bg-gray-900", text: "text-white", accent: "bg-purple-500" },
+  { name: "Spiritual baddie", bg: "bg-orange-50", text: "text-orange-900", accent: "bg-orange-400" },
   { name: "Queen of Cups", bg: "bg-blue-50", text: "text-blue-900", accent: "bg-blue-400" },
+  { name: "Touch grass", bg: "bg-green-50", text: "text-green-900", accent: "bg-green-400" }, // New theme
 ];
 
 export default function Dashboard() {
   const [dates, setDates] = useState<string[]>([]);
   const [today, setToday] = useState<Date | null>(null);
   const [theme, setTheme] = useState<Theme>(themes[0]);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // sidebar state
 
   // Load streaks from localStorage
   useEffect(() => {
@@ -33,11 +35,7 @@ export default function Dashboard() {
     setToday(new Date());
   }, []);
 
-  // Save theme preference
-  useEffect(() => {
-    window.localStorage.setItem("theme", JSON.stringify(theme.name));
-  }, [theme]);
-
+  // Load theme from localStorage
   useEffect(() => {
     const storedTheme = window.localStorage.getItem("theme");
     if (storedTheme) {
@@ -45,6 +43,11 @@ export default function Dashboard() {
       if (t) setTheme(t);
     }
   }, []);
+
+  // Save theme preference
+  useEffect(() => {
+    window.localStorage.setItem("theme", JSON.stringify(theme.name));
+  }, [theme]);
 
   if (!today) return null;
 
@@ -61,7 +64,7 @@ export default function Dashboard() {
   return (
     <div className={`flex min-h-screen ${theme.bg} ${theme.text} p-8`}>
       {/* Main content */}
-      <main className="flex-1 flex flex-col items-center justify-center space-y-8">
+      <main className="flex-1 flex flex-col items-center justify-center space-y-8 transition-colors duration-300">
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-semibold">Whats up babe? 🎀</h1>
           <p className="text-gray-500">what do u feel like doing today?</p>
@@ -78,21 +81,34 @@ export default function Dashboard() {
       </main>
 
       {/* Sidebar */}
-      <aside className="w-48 ml-8 flex-shrink-0 border-l border-gray-300 pl-4">
-        <h2 className="text-lg font-medium mb-4">Choose Your Mood Theme</h2>
-        <div className="flex flex-col gap-2">
-          {themes.map((th) => (
-            <button
-              key={th.name}
-              onClick={() => setTheme(th)}
-              className={`px-3 py-1 rounded-md text-white ${
-                th.accent
-              } ${theme.name === th.name ? "ring-2 ring-offset-1 ring-gray-500" : ""}`}
-            >
-              {th.name}
-            </button>
-          ))}
-        </div>
+      <aside
+        className={`flex-shrink-0 ml-8 border-l border-gray-300 pl-4 transition-all duration-300 ${
+          sidebarOpen ? "w-48" : "w-12"
+        }`}
+      >
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="mb-4 px-2 py-1 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 transition"
+        >
+          {sidebarOpen ? "⏴" : "⏵"}
+        </button>
+
+        {sidebarOpen && (
+          <div className="flex flex-col gap-2">
+            <h2 className="text-lg font-medium mb-4">Choose Your Mood Theme</h2>
+            {themes.map((th) => (
+              <button
+                key={th.name}
+                onClick={() => setTheme(th)}
+                className={`px-3 py-1 rounded-md text-white ${th.accent} ${
+                  theme.name === th.name ? "ring-2 ring-offset-1 ring-gray-500" : ""
+                }`}
+              >
+                {th.name}
+              </button>
+            ))}
+          </div>
+        )}
       </aside>
     </div>
   );
@@ -130,7 +146,7 @@ function CalendarGrid({ dates, today, accent }: { dates: string[]; today: Date; 
       <div className="flex gap-2 ml-8 text-xs text-gray-500">
         {weeks.map((_, i) => (
           <div key={i} className="w-5 text-center">
-            {/* Empty month labels for simplicity */}
+            {/* Month labels optional */}
           </div>
         ))}
       </div>
