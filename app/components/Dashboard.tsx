@@ -68,17 +68,29 @@ function CalendarGrid({
   dates: string[];
   today: Date;
 }) {
+  // Show last 12 weeks
+  const weeksToShow = 12;
+
+  // Clone today so we don't mutate it
+  const endDate = new Date(today);
+
+  // Go back X weeks
   const startDate = new Date(today);
-  startDate.setMonth(today.getMonth() - 2);
+  startDate.setDate(today.getDate() - weeksToShow * 7);
+
+  // Align to previous Sunday (GitHub style)
+  const dayOfWeek = startDate.getDay(); // 0 = Sunday
+  startDate.setDate(startDate.getDate() - dayOfWeek);
 
   const allDates: Date[] = [];
   const current = new Date(startDate);
 
-  while (current <= today) {
+  while (current <= endDate) {
     allDates.push(new Date(current));
     current.setDate(current.getDate() + 1);
   }
 
+  // Group into proper weeks (Sun → Sat columns)
   const weeks: Date[][] = [];
   for (let i = 0; i < allDates.length; i += 7) {
     weeks.push(allDates.slice(i, i + 7));
@@ -86,8 +98,8 @@ function CalendarGrid({
 
   return (
     <div className="flex gap-2 overflow-x-auto">
-      {weeks.map((week, i) => (
-        <div key={i} className="flex flex-col gap-2">
+      {weeks.map((week, weekIndex) => (
+        <div key={weekIndex} className="flex flex-col gap-2">
           {week.map((date) => {
             const iso = date.toISOString().split("T")[0];
             const isCompleted = dates.includes(iso);
@@ -96,14 +108,14 @@ function CalendarGrid({
             return (
               <div
                 key={iso}
-                className={`w-5 h-5 rounded-sm ${
+                className={`w-5 h-5 rounded-sm transition ${
                   isFuture
                     ? "bg-transparent"
                     : isCompleted
                     ? "bg-pink-500"
                     : "bg-pink-200"
                 }`}
-                title={iso}
+                title={date.toDateString()} // real readable date on hover
               />
             );
           })}
