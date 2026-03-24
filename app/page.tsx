@@ -79,6 +79,12 @@ const DOOM_LINKS = [
     emoji: "🪞",
     sub: "ur fave mirror app",
   },
+  {
+    label: "hd today TV",
+    url: "hdtoday.tv",
+    emoji: "📺",
+    sub: "lets gooo!",
+  },
 ];
 
 const PRODUCTIVE_MSGS = [
