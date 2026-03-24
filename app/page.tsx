@@ -81,7 +81,7 @@ const DOOM_LINKS = [
   },
   {
     label: "hd today TV",
-    url: "hdtoday.tv",
+    url: "https://hdtodayz.to",
     emoji: "📺",
     sub: "lets gooo!",
   },
