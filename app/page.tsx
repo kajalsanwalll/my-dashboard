@@ -58,7 +58,19 @@ const PRODUCTIVE_LINKS = [
     bg: "#100606",
     accentColor: "#ef4444",
   },
+  {
+    label: "Notesphere",
+    url: "https://notesphere-kohl.vercel.app/public-notes",
+    emoji: "📝",
+    sub: "lets explore some notes babyyy",
+    nameColor: "#c084fc",
+    borderColor: "#221533",
+    bg: "#0c0818",
+    accentColor: "#9333ea",
+  },
+  
 ];
+
 
 const DOOM_LINKS = [
   {
@@ -84,6 +96,12 @@ const DOOM_LINKS = [
     url: "https://hdtodayz.to",
     emoji: "📺",
     sub: "lets gooo!",
+  },
+  {
+    label: "Pinterest",
+    url: "https://in.pinterest.com",
+    emoji: "👛",
+    sub: "goddess-tier reflection",
   },
 ];
 
