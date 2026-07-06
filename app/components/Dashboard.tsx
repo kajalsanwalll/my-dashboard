@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-
+import TodayTasks from "./TodayTasks";
+import { Task } from "./TaskCard";
+import AddTaskModal from "./AddTaskModal";
+import FocusTimer from "./FocusTimer";
 // ── Types ─────────────────────────────────────────────────────────────────
 type StreakData = { dates: string[] };
 
@@ -87,6 +90,22 @@ function computeStreaks(dates: string[], today: Date) {
 
 // ── Main component ────────────────────────────────────────────────────────
 export default function Dashboard({ onBack }: { onBack?: () => void }) {
+  type Task = {
+  id: number;
+  title: string;
+  duration: number;
+  completed: boolean;
+};
+
+const [tasks, setTasks] = useState<Task[]>(() => {
+  if (typeof window === "undefined") return [];
+
+  const saved = localStorage.getItem("tasks");
+
+  return saved ? JSON.parse(saved) : [];
+});
+const [showTaskModal, setShowTaskModal] = useState(false);
+const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [allDates,   setAllDates]   = useState<Record<string, string[]>>({});
   const [theme,      setTheme]      = useState<Theme>(THEMES[0]);
   const [today]                     = useState(new Date());
@@ -126,8 +145,16 @@ export default function Dashboard({ onBack }: { onBack?: () => void }) {
     const ref = get("reflections"); if (ref) setReflections(ref);
     const bd  = get("birthdays");   if (bd)  setBirthdays(bd);
     const hb  = get("habits");      if (hb)  setHabits(hb);
+    const savedTasks = get("tasks");
+    if (savedTasks) setTasks(savedTasks);
     setHydrated(true);
   }, []);
+
+  useEffect(() => {
+  if (!hydrated) return;
+
+  localStorage.setItem("tasks", JSON.stringify(tasks));
+}, [tasks, hydrated]);
 
   useEffect(() => {
     setBirthdayToday(birthdays.filter(b => b.date === isoToday));
@@ -177,6 +204,38 @@ export default function Dashboard({ onBack }: { onBack?: () => void }) {
     if (activeHabitId === id) setActiveHabitId(next[0].id);
     setAllDates(prev => { const n = { ...prev }; delete n[id]; localStorage.setItem("allDates", JSON.stringify(n)); return n; });
   };
+  const clearCompletedTasks = () => {
+  setTasks((prev) => prev.filter((task) => !task.completed));
+};
+  const addTask = (title: string, duration: number) => {
+  setTasks(prev => [
+    ...prev,
+    {
+      id: Date.now(),
+      title,
+      duration,
+      completed: false,
+    },
+  ]);
+};
+
+const toggleTask = (id: number) => {
+  setTasks(prev =>
+    prev.map(task =>
+      task.id === id
+        ? { ...task, completed: !task.completed }
+        : task
+    )
+  );
+};
+
+const deleteTask = (id: number) => {
+  setTasks(prev => prev.filter(task => task.id !== id));
+};
+
+const startTask = (task: Task) => {
+  setActiveTask(task);
+};
 
   const exportAsImage = async () => {
     if (!calendarRef.current) return;
@@ -497,6 +556,13 @@ export default function Dashboard({ onBack }: { onBack?: () => void }) {
               onDayClick={setSelectedDate}
             />
           </div>
+          <TodayTasks
+           tasks={tasks}
+           onToggle={toggleTask}
+           onDelete={deleteTask}
+           onStart={startTask}
+           onAdd={() => setShowTaskModal(true)}
+          />
 
           {/* Bottom actions */}
           <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
@@ -584,6 +650,23 @@ export default function Dashboard({ onBack }: { onBack?: () => void }) {
             theme={theme}
           />
         )}
+        {showTaskModal && (
+    <AddTaskModal
+        onClose={() => setShowTaskModal(false)}
+        onSave={(title, duration) => {
+            addTask(title, duration);
+            setShowTaskModal(false);
+        }}
+        theme={theme}
+    />
+)}
+
+{activeTask && (
+    <FocusTimer
+        task={activeTask}
+        onClose={() => setActiveTask(null)}
+    />
+)}
       </div>
     </>
   );
