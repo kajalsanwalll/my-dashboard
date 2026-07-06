@@ -562,6 +562,7 @@ const startTask = (task: Task) => {
            onDelete={deleteTask}
            onStart={startTask}
            onAdd={() => setShowTaskModal(true)}
+           onClearCompleted={clearCompletedTasks}
           />
 
           {/* Bottom actions */}
